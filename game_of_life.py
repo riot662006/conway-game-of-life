@@ -1,0 +1,129 @@
+import pygame
+import sys
+from typing import Optional, List
+
+import time
+
+
+# a single cell. can't do much. Just be alive or not.
+class Cell:
+    KILL = 0
+    REVIVE = 1
+
+
+# the board of life. contains the cell grid. also displays the cells
+class Board:
+    def __init__(self, screen, pos, size, cell_size):
+        # needed variables.
+        self.screen = screen
+        self.x, self.y = pos  # position of top-left corner of grid
+        self.rows, self.cols = size  # number of rows and columns for grid
+        self.cell_size = cell_size  # size of each displayed cell
+
+        self.board: List[List[Optional[Cell]]] = [[None for x in range(self.rows)] for y in range(self.cols)]
+        self.updatesLeft = []  # to help delete and revive dead cells
+
+    def get_cell(self, pos):
+        x, y = pos
+        if x < 0 or x >= self.rows or y < 0 or y >= self.cols:
+            return None
+        else:
+            return self.board[y][x]
+
+    def set_cell(self, pos, obj):
+        x, y = pos
+        assert 0 <= x < self.rows and 0 <= y < self.cols \
+            , f"Invalid position for setting. (x: {x}, y: {y})"
+        self.board[y][x] = obj
+
+    def draw_board(self):
+        j = 0
+        while j < self.cols:
+            i = 0
+            while i < self.rows:
+                if self.get_cell((i, j)) is not None:  # if is not None then it is a Cell
+                    x, y = self.x + (i * self.cell_size), self.y + (j * self.cell_size)
+                    pygame.draw.rect(self.screen, 'white',
+                                     (x, y, self.cell_size, self.cell_size))
+                i += 1
+            j += 1
+
+    def revive_cell(self, pos):
+        x, y = pos
+        assert self.get_cell((x, y)) is None, f"Can only revive dead cells. Cell at pos {pos} is alive."
+        self.updatesLeft.append((x, y, Cell.REVIVE))
+
+    def kill_cell(self, pos):
+        x, y = pos
+        assert self.get_cell((x, y)) is not None, f"Can only kill at pos {pos} if there is a cell."
+        self.updatesLeft.append((x, y, Cell.KILL))
+
+    def update(self):
+        while len(self.updatesLeft) > 0:
+            x, y, action = self.updatesLeft.pop()
+            self.set_cell((x, y), None if action == Cell.KILL else Cell())
+
+    def neighbors(self, pos):
+        x, y = pos
+        return [self.get_cell((x - 1, y - 1)), self.get_cell((x, y - 1)), self.get_cell((x + 1, y - 1)),
+                self.get_cell((x - 1, y)), self.get_cell((x + 1, y)),
+                self.get_cell((x - 1, y + 1)), self.get_cell((x, y + 1)), self.get_cell((x + 1, y + 1))]
+
+    def next_position(self):
+        """
+        Rules:
+            Any live cell with fewer than two live neighbours dies (referred to as underpopulation).
+            Any live cell with more than three live neighbours dies (referred to as overpopulation).
+            Any live cell with two or three live neighbours lives, unchanged, to the next generation.
+            Any dead cell with exactly three live neighbours comes to life.
+        """
+
+        j = 0
+        while j < self.cols:
+            i = 0
+            while i < self.rows:
+                no_alive_neighbors = sum(1 for x in self.neighbors((i, j)) if x is not None)
+                if self.get_cell((i, j)) is None and no_alive_neighbors == 3:
+                    self.revive_cell((i, j))
+                elif self.get_cell((i, j)) is not None and (no_alive_neighbors < 2 or no_alive_neighbors > 3):
+                    self.kill_cell((i, j))
+                i += 1
+            j += 1
+        self.update()
+
+
+def run_game():
+    pygame.init()
+
+    # Some display variables
+    screen_width = 1000
+    screen_height = 600
+    fps = 60
+
+    screen = pygame.display.set_mode((screen_width, screen_height))
+    pygame.display.set_caption("Conway's Game of Life")
+
+    clock = pygame.time.Clock()
+
+    # Default Cells
+    board = Board(screen, (0, 0), (5, 5), 20)
+    default_cells = [(2, 2), (1, 2), (3, 2)]
+
+    for i in default_cells:
+        board.revive_cell(i)
+
+    board.update()
+
+    running = True
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+
+        board.draw_board()
+        pygame.display.flip()
+
+        clock.tick(fps)
+
+    pygame.quit()
+    sys.exit()
