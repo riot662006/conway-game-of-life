@@ -13,7 +13,7 @@ class Cell:
 
 # the board of life. contains the cell grid. also displays the cells
 class Board:
-    def __init__(self, screen, pos, size, cell_size):
+    def __init__(self, screen, pos, size, cell_size, /, wrap=False):
         # needed variables.
         self.screen = screen
         self.x, self.y = pos  # position of top-left corner of grid
@@ -22,6 +22,8 @@ class Board:
 
         self.board: List[List[Optional[Cell]]] = [[None for x in range(self.rows)] for y in range(self.cols)]
         self.updatesLeft = []  # to help delete and revive dead cells
+
+        self.wrapped = wrap # if the board wraps round. needs to be known when finding neighbors
 
     def get_cell(self, pos):
         x, y = pos
@@ -37,6 +39,8 @@ class Board:
         self.board[y][x] = obj
 
     def draw_board(self):
+        pygame.draw.rect(self.screen, 'grey',
+                         (self.x, self.y, self.rows * self.cell_size, self.cols * self.cell_size))
         j = 0
         while j < self.cols:
             i = 0
@@ -65,6 +69,13 @@ class Board:
 
     def neighbors(self, pos):
         x, y = pos
+        if self.wrapped:
+            left, right, up, down = (x - 1) % self.rows, (x + 1) % self.rows, (y - 1) % self.cols, (y + 1) % self.cols
+
+            return [self.get_cell((left, up)), self.get_cell((x, up)), self.get_cell((right, up)),
+                    self.get_cell((left, y)), self.get_cell((right, y)),
+                    self.get_cell((left, down)), self.get_cell((x, down)), self.get_cell((right, down))]
+
         return [self.get_cell((x - 1, y - 1)), self.get_cell((x, y - 1)), self.get_cell((x + 1, y - 1)),
                 self.get_cell((x - 1, y)), self.get_cell((x + 1, y)),
                 self.get_cell((x - 1, y + 1)), self.get_cell((x, y + 1)), self.get_cell((x + 1, y + 1))]
@@ -99,6 +110,7 @@ def run_game():
     screen_width = 1000
     screen_height = 600
     fps = 60
+    delay_time = 30
 
     screen = pygame.display.set_mode((screen_width, screen_height))
     pygame.display.set_caption("Conway's Game of Life")
@@ -106,24 +118,32 @@ def run_game():
     clock = pygame.time.Clock()
 
     # Default Cells
-    board = Board(screen, (0, 0), (5, 5), 20)
-    default_cells = [(2, 2), (1, 2), (3, 2)]
+    board = Board(screen, (0, 0), (100, 100), 5, wrap=True)
+    default_cells = [(3, 1), (1, 2), (3, 2), (2, 3), (3, 3)]
 
     for i in default_cells:
         board.revive_cell(i)
 
     board.update()
 
+    elapsed_time = 0
     running = True
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
 
+        screen.fill((0, 0, 0))
         board.draw_board()
         pygame.display.flip()
 
         clock.tick(fps)
+
+        elapsed_time += 1000 / fps
+
+        if elapsed_time >= delay_time:
+            elapsed_time = 0
+            board.next_position()
 
     pygame.quit()
     sys.exit()
