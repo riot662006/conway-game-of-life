@@ -1,4 +1,10 @@
-class PatternRLE:
+import setuptools
+from importlib import resources as impresources
+from . import common_patterns
+
+
+class PatternRLE:  # run length encoding of common_patterns
+    # some common common_patterns in classes
     class StillLife:
         block = "2o$2o!"
         beehive = "b2o$o2bo$b2o!"
@@ -8,11 +14,14 @@ class PatternRLE:
 
     class Oscillator:
         beacon = "2o$2o$2b2o$2b2o!"
+        toad = "b3o$o$b2o!"
 
     class SpaceShip:
         glider = "2bo$obo$b2o!"
         lwss = "o2bo$4bo$o3bo$b4o!"
         copperhead = "b2o2b2o$3b2o$3b2o$obo2bobo$o6bo2$o6bo$b2o2b2o$2b4o2$3b2o$3b2o!"
+        fireship = "4bo2bo$4bo2bo$3bo4bo$3bo4bo$3bo4bo$3bo4bo$2b3o2b3o$2bob4obo$" \
+                   "3bo4bo3$5b2o$5b2o$5b2o$3bo4bo$b3o4b3o$3o6b3o$2o8b2o$b10o$2b8o$4b4o!"
 
     class Gun:
         gosper = "24bo$22bobo$12b2o6b2o12b2o$11bo3bo4b2o12b2o$" \
@@ -20,9 +29,14 @@ class PatternRLE:
         simkin = "2o5b2o$2o5b2o2$4b2o$4b2o5$22b2ob2o$21bo5bo$" \
                  "21bo6bo2b2o$21b3o3bo3b2o$26bo4!"
 
-
     @staticmethod
     def pat(p):
+        """
+            Converts an RLE pattern to a pattern for the board.
+
+        :param p: string
+        :return: list[tuple[int, int]]
+        """
         assert not (any([a not in "bo$!1234567890" for a in p])), "Invalid character for RLE format"
         assert p.find('!') == -1 or p.find('!') == len(p) - 1, "'!' must be at the end of the pattern"
 
@@ -50,6 +64,12 @@ class PatternRLE:
 
     @staticmethod
     def rle(pattern: list[tuple]):
+        """
+            Converts a pattern for the board to an RLE format
+
+        :param pattern: list[tuple[int, int]]
+        :return: string
+        """
         # sorts the pattern by the y-axis then the x-axis
         pattern.sort(key=lambda x: (x[1], x[0]))
         lines = []
@@ -91,42 +111,42 @@ class PatternRLE:
 
         return compressed_p + "!"
 
+    @staticmethod
+    def file_to_pat(file, encoding='rle'):
+        inp_file = (impresources.files(common_patterns) / file)
 
-still_life = {
-    'block': [(0, 0), (1, 0), (0, 1), (1, 1)],
-    'beehive': [(1, 0), (2, 0), (0, 1), (3, 1), (1, 2), (2, 2)],
-    'loaf': [(1, 0), (2, 0), (0, 1), (3, 1), (1, 2), (3, 2), (2, 3)],
-    'boat': [(0, 0), (1, 0), (0, 1), (2, 1), (1, 2)],
-    'tub': [(1, 0), (0, 1), (2, 1), (1, 2)]
-}
+        with inp_file.open("rt") as f:
+            pat = ""
 
-spaceship = {
-    'glider': [(2, 0), (0, 1), (2, 1), (1, 2), (2, 2)],
-    'lwss': [(0, 0), (3, 0), (4, 1), (0, 2), (4, 2), (1, 3), (2, 3), (3, 3), (4, 3)]
-}
+            for x in f:
+                if x[0] not in '#x':
+                    pat += x.strip()
 
-oscillator = {
-    'blinker': [(0, 0), (1, 0), (2, 0)],
-    'toad': [(1, 0), (2, 0), (3, 0), (0, 1), (1, 2), (2, 2)]
-}
+            return PatternRLE.pat(pat)
 
-tests = [
-    [
-        (0, 0), (1, 0), (2, 0), (4, 0),
-        (0, 1),
-        (3, 2), (4, 2),
-        (1, 3), (2, 3), (4, 3),
-        (0, 4), (2, 4), (4, 4)
-    ]
-]
+    @staticmethod
+    def bounding_box(pattern: list[tuple[int, int]]):
+        """
+        Finds the size of the bounding box of a pattern.
 
+        :param pattern: list[tuple[int, int]]
+        :return: tuple([int, int])
+        """
 
-guns = [
-    "24bo$22bobo$12b2o6b2o12b2o$11bo3bo4b2o12b2o$"
-    "2o8bo5bo3b2o$2o8bo3bob2o4bobo$10bo5bo7bo$11bo3bo$12b2o!",
-]
+        (left_bound, lower_bound), (right_bound, upper_bound) = pattern[0], pattern[0]
+
+        for line in pattern:
+            left_bound = min(left_bound, line[0])
+            right_bound = max(right_bound, line[0])
+
+            lower_bound = min(lower_bound, line[1])
+            upper_bound = max(upper_bound, line[1])
+
+        return right_bound - left_bound + 1, upper_bound - lower_bound + 1
+
 
 if __name__ == '__main__':
-    pat = still_life['tub']
     print(PatternRLE.rle([(2, 0), (0, 1), (2, 1), (1, 2), (2, 2)]),
-        PatternRLE.rle([(0, 0), (3, 0), (4, 1), (0, 2), (4, 2), (1, 3), (2, 3), (3, 3), (4, 3)]))
+          PatternRLE.rle([(1, 0), (2, 0), (3, 0), (0, 1), (1, 2), (2, 2)]))
+
+    print(PatternRLE.file_to_pat('gosper.rle'))
