@@ -4,6 +4,7 @@ import sys
 from entities.board import Board
 import entities.patterns as patterns
 
+
 def run_game():
     pygame.init()
 
@@ -18,12 +19,10 @@ def run_game():
 
     clock = pygame.time.Clock()
 
-    board = Board(screen, (0, 0), (100, 100), 5, wrap=True)
+    board = Board(screen, (0, 0), (100, 100), 5, wrap=False)
 
-    board.revive_cells(patterns.still_life['loaf'], (50, 50))
-    board.revive_cells(patterns.spaceship['lwss'], (70, 70))
-    board.revive_cells(patterns.spaceship['glider'], (30, 30))
-
+    board.revive_cells(patterns.rle("24bo$22bobo$12b2o6b2o12b2o$11bo3bo4b2o12b2o$"
+                                    "2o8bo5bo3b2o$2o8bo3bob2o4bobo$10bo5bo7bo$11bo3bo$12b2o!"), (5, 5))
     board.update()
 
     elapsed_time = 0
