@@ -2,7 +2,9 @@ import pygame
 import sys
 
 from entities.board import Board
+
 import entities.patterns as patterns
+from entities.patterns import PatternRLE
 
 
 def run_game():
@@ -19,10 +21,10 @@ def run_game():
 
     clock = pygame.time.Clock()
 
-    board = Board(screen, (0, 0), (100, 100), 5, wrap=False)
+    board = Board(screen, (0, 0), (100, 100), 5, wrap=True)
 
-    board.revive_cells(patterns.rle("24bo$22bobo$12b2o6b2o12b2o$11bo3bo4b2o12b2o$"
-                                    "2o8bo5bo3b2o$2o8bo3bob2o4bobo$10bo5bo7bo$11bo3bo$12b2o!"), (5, 5))
+    board.revive_cells(PatternRLE.pat(PatternRLE.Oscillator.beacon), (5, 5))
+    board.revive_cells(PatternRLE.pat(PatternRLE.Gun.simkin), (40, 40))
     board.update()
 
     elapsed_time = 0
