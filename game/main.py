@@ -8,7 +8,7 @@ from entities.patterns import PatternRLE
 
 
 def board_setup(board):
-    board.revive_cells(PatternRLE.file_to_pat('gosper.rle'))
+    board.add_pattern(PatternRLE.file_to_pat('gosper.rle'))
 
 
 def run_game():  # technically a simulation but its called the Conway's 'GAME' of life. =)
@@ -26,10 +26,8 @@ def run_game():  # technically a simulation but its called the Conway's 'GAME' o
 
     clock = pygame.time.Clock()  # to control frame rate
 
-    board = Board(screen, (0, 0), (50, 50), 8, wrap=True)  # board. refer to entities/board
-
+    board = Board(screen, (0, 0), (300, 300), 2, wrap=False)  # board. refer to entities/board
     board_setup(board)
-    board.update()
 
     elapsed_time = 0  # to calc time since last board update
     running = True
