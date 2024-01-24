@@ -1,5 +1,5 @@
 import pygame
-from typing import Optional, List
+from .patterns import Pattern
 
 
 # the board of life. contains the cell grid. also displays the cells
@@ -126,8 +126,7 @@ class Board:
 
         for x in to_update:
             alive_neighbors = self.alive_neighbors(x)
-            # rules applied below. refer to rules.txt.
-            # TODO: add room for changing these rules
+            # rules applied below. refer to rules.txt. Would add room for change later.
             if self.is_alive(x) and str(alive_neighbors) not in '23':
                 to_toggle.append(x)
             elif x not in self.alive_cells and alive_neighbors == 3:
@@ -136,7 +135,9 @@ class Board:
         for x in to_toggle:
             self.set_cell(x, not(self.is_alive(x))) # toggles
 
-    def add_pattern(self, pattern: list[tuple[int, int]], offset=(0, 0)):
+    def add_pattern(self, pattern: list[tuple[int, int]] | Pattern, offset=(0, 0)):
+        if isinstance(pattern, Pattern):
+            pattern = pattern.alive_cells
         if self.wrapped:
             pattern = [((x[0] + offset[0]) % self.rows, (x[1] + offset[1]) % self.cols) for x in pattern]
         else:

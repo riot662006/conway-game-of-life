@@ -1,42 +1,65 @@
 import setuptools
 from importlib import resources as impresources
-from . import common_patterns
+
+try:
+    from . import common_patterns
+except ImportError:
+    import common_patterns
 
 
-class PatternRLE:  # run length encoding of common_patterns
-    # some common common_patterns in classes
-    class StillLife:
-        block = "2o$2o!"
-        beehive = "b2o$o2bo$b2o!"
-        loaf = "b2ob$o2bo$bobo$2bo!"
-        boat = "2o$obo$bo!"
-        tub = "bo$obo$bo!"
+class Pattern:
+    def __init__(self, p: str | list[tuple[int, int]]):
+        if type(p) == str:  # for RLE pattern
+            self.alive_cells = set(Pattern.rle_to_pat(p))
+        else:
+            self.alive_cells = p
 
-    class Oscillator:
-        beacon = "2o$2o$2b2o$2b2o!"
-        toad = "b3o$o$b2o!"
+    @property
+    def bounding_box(self):
+        """
+                Finds the size of the bounding box of the pattern.
 
-    class SpaceShip:
-        glider = "2bo$obo$b2o!"
-        lwss = "o2bo$4bo$o3bo$b4o!"
-        copperhead = "b2o2b2o$3b2o$3b2o$obo2bobo$o6bo2$o6bo$b2o2b2o$2b4o2$3b2o$3b2o!"
-        fireship = "4bo2bo$4bo2bo$3bo4bo$3bo4bo$3bo4bo$3bo4bo$2b3o2b3o$2bob4obo$" \
-                   "3bo4bo3$5b2o$5b2o$5b2o$3bo4bo$b3o4b3o$3o6b3o$2o8b2o$b10o$2b8o$4b4o!"
+                :return: tuple([int, int])
+                """
 
-    class Gun:
-        gosper = "24bo$22bobo$12b2o6b2o12b2o$11bo3bo4b2o12b2o$" \
-                 "2o8bo5bo3b2o$2o8bo3bob2o4bobo$10bo5bo7bo$11bo3bo$12b2o!"
-        simkin = "2o5b2o$2o5b2o2$4b2o$4b2o5$22b2ob2o$21bo5bo$" \
-                 "21bo6bo2b2o$21b3o3bo3b2o$26bo4!"
+        left_bound, lower_bound, right_bound, upper_bound = 0, 0, 0, 0
+        first = True
+
+        for line in self.alive_cells:
+            if first:
+                (left_bound, lower_bound), (right_bound, upper_bound) = line, line
+                first = False
+            else:
+                left_bound = min(left_bound, line[0])
+                right_bound = max(right_bound, line[0])
+
+                lower_bound = min(lower_bound, line[1])
+                upper_bound = max(upper_bound, line[1])
+
+        return right_bound - left_bound + 1, upper_bound - lower_bound + 1
 
     @staticmethod
-    def pat(p):
+    def open(file, encoding='rle'):
+        inp_file = (impresources.files(common_patterns) / file)
+
+        with inp_file.open("rt") as f:
+            pat = ""
+
+            for x in f:
+                if x[0] not in '#x':
+                    pat += x.strip()
+
+            return Pattern(pat)
+
+    @staticmethod
+    def rle_to_pat(p):
         """
             Converts an RLE pattern to a pattern for the board.
 
         :param p: string
         :return: list[tuple[int, int]]
         """
+
         assert not (any([a not in "bo$!1234567890" for a in p])), "Invalid character for RLE format"
         assert p.find('!') == -1 or p.find('!') == len(p) - 1, "'!' must be at the end of the pattern"
 
@@ -63,13 +86,14 @@ class PatternRLE:  # run length encoding of common_patterns
         return pattern
 
     @staticmethod
-    def rle(pattern: list[tuple]):
+    def pat_to_rle(pattern: list[tuple]):
         """
             Converts a pattern for the board to an RLE format
 
         :param pattern: list[tuple[int, int]]
         :return: string
         """
+
         # sorts the pattern by the y-axis then the x-axis
         pattern.sort(key=lambda x: (x[1], x[0]))
         lines = []
@@ -111,42 +135,9 @@ class PatternRLE:  # run length encoding of common_patterns
 
         return compressed_p + "!"
 
-    @staticmethod
-    def file_to_pat(file, encoding='rle'):
-        inp_file = (impresources.files(common_patterns) / file)
-
-        with inp_file.open("rt") as f:
-            pat = ""
-
-            for x in f:
-                if x[0] not in '#x':
-                    pat += x.strip()
-
-            return PatternRLE.pat(pat)
-
-    @staticmethod
-    def bounding_box(pattern: list[tuple[int, int]]):
-        """
-        Finds the size of the bounding box of a pattern.
-
-        :param pattern: list[tuple[int, int]]
-        :return: tuple([int, int])
-        """
-
-        (left_bound, lower_bound), (right_bound, upper_bound) = pattern[0], pattern[0]
-
-        for line in pattern:
-            left_bound = min(left_bound, line[0])
-            right_bound = max(right_bound, line[0])
-
-            lower_bound = min(lower_bound, line[1])
-            upper_bound = max(upper_bound, line[1])
-
-        return right_bound - left_bound + 1, upper_bound - lower_bound + 1
-
 
 if __name__ == '__main__':
-    print(PatternRLE.rle([(2, 0), (0, 1), (2, 1), (1, 2), (2, 2)]),
-          PatternRLE.rle([(1, 0), (2, 0), (3, 0), (0, 1), (1, 2), (2, 2)]))
+    print(Pattern.pat_to_rle([(2, 0), (0, 1), (2, 1), (1, 2), (2, 2)]),
+          Pattern.pat_to_rle([(1, 0), (2, 0), (3, 0), (0, 1), (1, 2), (2, 2)]))
 
-    print(PatternRLE.file_to_pat('gosper.rle'))
+    print(Pattern.open('gosper.rle').alive_cells)

@@ -4,11 +4,11 @@ import sys
 from entities.board import Board
 
 import entities.common_patterns as patterns
-from entities.patterns import PatternRLE
+from entities.patterns import Pattern
 
 
 def board_setup(board):
-    board.add_pattern(PatternRLE.file_to_pat('gosper.rle'))
+    board.add_pattern(Pattern.open('gosper.rle'))
 
 
 def run_game():  # technically a simulation but its called the Conway's 'GAME' of life. =)
