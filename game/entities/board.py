@@ -137,6 +137,9 @@ class Board:
             self.set_cell(x, not(self.is_alive(x))) # toggles
 
     def add_pattern(self, pattern: list[tuple[int, int]], offset=(0, 0)):
-        pattern = [(x[0] + offset[0], x[1] + offset[1]) for x in pattern
-                   if 0 <= x[0] + offset[0] <= self.rows and 0 <= x[1] + offset[1] <= self.cols]
+        if self.wrapped:
+            pattern = [((x[0] + offset[0]) % self.rows, (x[1] + offset[1]) % self.cols) for x in pattern]
+        else:
+            pattern = [(x[0] + offset[0], x[1] + offset[1]) for x in pattern
+                       if 0 <= x[0] + offset[0] <= self.rows and 0 <= x[1] + offset[1] <= self.cols]
         self.alive_cells |= set(pattern)
