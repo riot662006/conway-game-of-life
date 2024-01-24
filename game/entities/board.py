@@ -45,7 +45,7 @@ class Board:
         elif state:
             self.alive_cells.add((x, y))
 
-    def draw_board(self):
+    def draw(self):
         """
         Draws the board and the alive cells on them.
         """
