@@ -1,5 +1,6 @@
 import setuptools
 from importlib import resources as impresources
+from typing import Iterable
 
 try:
     from . import common_patterns
@@ -8,8 +9,8 @@ except ImportError:
 
 
 class Pattern:
-    def __init__(self, p: str | list[tuple[int, int]]):
-        if type(p) == str:  # for RLE pattern
+    def __init__(self, p: str | Iterable[tuple[int, int]]):
+        if isinstance(p, str):  # for RLE pattern
             self.alive_cells = set(Pattern.rle_to_pat(p))
         else:
             self.alive_cells = p
@@ -36,7 +37,34 @@ class Pattern:
                 lower_bound = min(lower_bound, line[1])
                 upper_bound = max(upper_bound, line[1])
 
-        return right_bound - left_bound + 1, upper_bound - lower_bound + 1
+        return left_bound, lower_bound, right_bound - left_bound + 1, upper_bound - lower_bound + 1
+
+    def translate(self, pos: tuple[int, int]):
+        return Pattern([(x[0] + pos[0], x[1] + pos[1]) for x in self.alive_cells])
+
+    def strip(self):
+        x, y, _, _ = self.bounding_box
+
+        return self.translate((-x, -y))
+
+    def rotate90(self, clockwise=True):
+        x, y, w, h = self.bounding_box
+        print(x, y, w, h)
+        if clockwise:
+            return Pattern([(-y, x) for (x, y) in self.alive_cells]).translate((h - 1, 0))
+        else:
+            return Pattern([(y, -x) for (x, y) in self.alive_cells]).translate((0, w - 1))
+
+    def flip_x(self):
+        x, y, w, h = self.bounding_box
+        return Pattern([(x, -y) for (x, y) in self.alive_cells]).translate((0, h - 1))
+
+    def flip_y(self):
+        x, y, w, h = self.bounding_box
+        return Pattern([(-x, y) for (x, y) in self.alive_cells]).translate((w - 1, 0))
+
+    def to_rle(self):
+        return Pattern.pat_to_rle(list(self.alive_cells))
 
     @staticmethod
     def open(file, encoding='rle'):
