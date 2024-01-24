@@ -144,3 +144,8 @@ class Board:
             pattern = [(x[0] + offset[0], x[1] + offset[1]) for x in pattern
                        if 0 <= x[0] + offset[0] <= self.rows and 0 <= x[1] + offset[1] <= self.cols]
         self.alive_cells |= set(pattern)
+
+    def export(self, strip=False):
+        if strip:
+            return Pattern(self.alive_cells).strip().to_rle()
+        return Pattern.pat_to_rle(list(self.alive_cells))
