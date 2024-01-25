@@ -1,10 +1,15 @@
 import pygame
-import sys
+from enum import Enum
 
 from entities.board import Board
 
 import entities.common_patterns as patterns
 from entities.patterns import Pattern
+
+
+class GameState(Enum):
+    NORMAL_SPEED_FORWARD = 0
+    PAUSED = 1
 
 
 class GameOfLife:
@@ -16,6 +21,8 @@ class GameOfLife:
 
         self.board = Board(screen, board_pos, board_size, pixel_size, board_wrap)
         self.sim_clock = pygame.time.Clock()
+
+        self._state: GameState = GameState.NORMAL_SPEED_FORWARD
 
     def next_frame(self):
         self.board.next_position()
@@ -30,12 +37,25 @@ class GameOfLife:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
-            next_frame_timer += 1000/self.fps
-            self.sim_clock.tick(self.fps)
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_SPACE:
+                        print("PAUSED" if self._state != GameState.PAUSED else "RESUME")
+                        if self._state != GameState.PAUSED:
+                            self._state = GameState.PAUSED
+                            next_frame_timer = 0
+                        else:
+                            self._state = GameState.NORMAL_SPEED_FORWARD
+                    elif event.key == pygame.K_RIGHT and self._state == GameState.PAUSED:
+                        print("ONE FRAME FORWARD")
+                        self.next_frame()
 
-            if next_frame_timer >= self.sim_frame_time:
-                next_frame_timer = 0
-                self.next_frame()
+            if self._state == GameState.NORMAL_SPEED_FORWARD:
+                next_frame_timer += 1000/self.fps
+                self.sim_clock.tick(self.fps)
+
+                if next_frame_timer >= self.sim_frame_time:
+                    next_frame_timer = 0
+                    self.next_frame()
         pygame.quit()
 
 
@@ -61,7 +81,6 @@ if __name__ == '__main__':
 
     g = GameOfLife(S, board_size=(50, 50), pixel_size=10)
 
-    g.board.add_pattern(Pattern.open('glider.rle'), (0, 0))
-    g.board.add_pattern(Pattern.open('glider.rle').flip_y(), (44, 4))
-
+    g.board.add_pattern(Pattern.open('glider.rle'), (2, 2))
+    g.board.add_pattern(Pattern.open('beehive.rle'), (20, 20))
     g.mainloop()
