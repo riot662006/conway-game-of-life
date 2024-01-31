@@ -2,18 +2,19 @@ import setuptools
 from importlib import resources as impresources
 from typing import Iterable
 
-try:
-    from . import common_patterns
-except ImportError:
-    import common_patterns
+from . import common_patterns
 
+class PatternException(BaseException): pass
 
 class Pattern:
     def __init__(self, p: str | Iterable[tuple[int, int]]):
+        super().__init__()
         if isinstance(p, str):  # for RLE pattern
-            self.alive_cells = set(Pattern.rle_to_pat(p))
+            self.alive_cells: set[tuple[int, int]] = set(Pattern.rle_to_pat(p))
+        elif isinstance(p, self.__class__):  # for Pattern objects
+            self.alive_cells = set(p.alive_cells)
         else:
-            self.alive_cells = p
+            self.alive_cells = set(p)
 
     @property
     def bounding_box(self):
@@ -42,10 +43,22 @@ class Pattern:
     def translate(self, pos: tuple[int, int]):
         return Pattern([(x[0] + pos[0], x[1] + pos[1]) for x in self.alive_cells])
 
+    def __radd__(self, pos: tuple[int, int]):
+        return self.translate(pos)
+
     def strip(self):
         x, y, _, _ = self.bounding_box
 
         return self.translate((-x, -y))
+
+    def add(self, pattern, pos: tuple[int, int] | None = None):
+        assert isinstance(pattern, self.__class__)
+
+        if pos is None:
+            pos = (0, 0)
+
+        new_pattern = Pattern(self.alive_cells | pattern.translate(pos).alive_cells)
+        return new_pattern
 
     def rotate90(self, clockwise=True):
         x, y, w, h = self.bounding_box
@@ -163,9 +176,3 @@ class Pattern:
 
         return compressed_p + "!"
 
-
-if __name__ == '__main__':
-    print(Pattern.pat_to_rle([(2, 0), (0, 1), (2, 1), (1, 2), (2, 2)]),
-          Pattern.pat_to_rle([(1, 0), (2, 0), (3, 0), (0, 1), (1, 2), (2, 2)]))
-
-    print(Pattern.open('gosper.rle').alive_cells)

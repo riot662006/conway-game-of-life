@@ -2,3 +2,5 @@ Any live cell with fewer than two live neighbours dies (referred to as underpopu
 Any live cell with more than three live neighbours dies (referred to as overpopulation).
 Any live cell with two or three live neighbours lives, unchanged, to the next generation.
 Any dead cell with exactly three live neighbours comes to life.
+
+For more information, go to https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life
