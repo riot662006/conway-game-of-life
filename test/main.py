@@ -8,7 +8,7 @@ if __name__ == '__main__':
     pygame.init()
     S = pygame.display.set_mode((screen_width, screen_height))
 
-    l_lwss = Pattern.open('lwss.rle')
+    l_lwss = Pattern.open('../pattern/common/lwss.rle')
     r_lwss = l_lwss.flip_y()
 
     pat = Pattern()

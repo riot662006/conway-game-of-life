@@ -2,9 +2,6 @@ import setuptools
 from importlib import resources as impresources
 from typing import Iterable
 
-from . import common_patterns
-
-
 class PatternException(BaseException): pass
 
 
@@ -100,9 +97,7 @@ class Pattern:
 
     @staticmethod
     def open(file, encoding='rle'):
-        inp_file = (impresources.files(common_patterns) / file)
-
-        with inp_file.open("rt") as f:
+        with open(file) as f:
             pat = ""
 
             for x in f:
