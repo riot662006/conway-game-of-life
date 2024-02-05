@@ -1,8 +1,8 @@
 import pygame
 from enum import Enum
 
-from .entities.board import Board
-from .entities.patterns import Pattern
+from .pattern.board import Board
+from .pattern.patterns import Pattern
 
 
 class GameState(Enum):

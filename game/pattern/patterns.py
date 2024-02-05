@@ -1,11 +1,31 @@
-import setuptools
-from importlib import resources as impresources
-from typing import Iterable
+class PatternBase:
+    def __init__(self):
+        self.alive_cells = set()
 
-class PatternException(BaseException): pass
+    @property
+    def bbox(self):
+        return None
+
+    def translate(self, pos: tuple[int, int]):
+        pass
+
+    def translated(self, pos: tuple[int, int]):
+        pass
+
+    def strip(self):
+        pass
+
+    def stripped(self):
+        pass
+
+    def add(self, pattern, pos: tuple[int, int]):
+        pass
+
+    def clear_rect(self, x, y, w, h):
+        pass
 
 
-class Pattern:
+class Pattern(PatternBase):
     def __init__(self, p=None):
         super().__init__()
         if p is None:
@@ -20,10 +40,10 @@ class Pattern:
     @property
     def bounding_box(self):
         """
-                Finds the size of the bounding box of the pattern.
+        Finds the size of the bounding box of the pattern.
 
-                :return: tuple([int, int])
-                """
+        :return: tuple([int, int])
+        """
 
         left_bound, lower_bound, right_bound, upper_bound = 0, 0, 0, 0
         first = True
@@ -41,13 +61,23 @@ class Pattern:
 
         return left_bound, lower_bound, right_bound - left_bound + 1, upper_bound - lower_bound + 1
 
+    def copy(self):
+        return Pattern(self.alive_cells)
+
     def translate(self, pos: tuple[int, int]):
-        return Pattern([(x[0] + pos[0], x[1] + pos[1]) for x in self.alive_cells])
+        new_cells = {(x[0] + pos[0], x[1] + pos[1]) for x in self.alive_cells}
+        self.alive_cells = new_cells
+
+    def translated(self, pos: tuple[int, int]):
+        return Pattern({(x[0] + pos[0], x[1] + pos[1]) for x in self.alive_cells})
 
     def strip(self):
         x, y, _, _ = self.bounding_box
+        self.translate((-x, -y))
 
-        return self.translate((-x, -y))
+    def stripped(self):
+        x, y, _, _ = self.bounding_box
+        return self.translated((-x, -y))
 
     def add(self, pattern, pos: tuple[int, int] | None = None):
         """
@@ -61,36 +91,37 @@ class Pattern:
         if pos is None:
             pos = (0, 0)
 
-        new_pattern = Pattern(self.alive_cells | pattern.translate(pos).alive_cells)
-        return new_pattern
+        self.alive_cells |= pattern.translated(pos).alive_cells
 
-    def clear(self, rect: tuple[int, int, int, int]):
+    def clear_rect(self, x, y, w, h):
         """
-        Clears all alive cells in the rectangle, rect (left-top-x, left-top-y, width, height). Returns resulting pattern.
-        :param rect: tuple[int, int, int, int] | None
+        Clears all alive cells in the rectangle, rect (left-top-x, left-top-y, width-w, height-h).
+        Returns resulting pattern.
         :return: Pattern
         """
 
-        positions = {(x, y) for x in range(rect[0], rect[0] + rect[2]) for y in range(rect[1], rect[1] + rect[3])}
-        new_pattern = Pattern(self.alive_cells - positions)
-
-        return new_pattern
+        positions = {(a, b) for a in range(x, x + w) for b in range(y, y + h)}
+        self.alive_cells -= positions
 
     def rotate90(self, clockwise=True):
         x, y, w, h = self.bounding_box
-        print(x, y, w, h)
+
         if clockwise:
-            return Pattern([(-y, x) for (x, y) in self.alive_cells]).translate((h - 1, 0))
+            self.alive_cells = {(-y, x) for (x, y) in self.alive_cells}
+            self.translate((h - 1, 0))
         else:
-            return Pattern([(y, -x) for (x, y) in self.alive_cells]).translate((0, w - 1))
+            self.alive_cells = {(y, -x) for (x, y) in self.alive_cells}
+            self.translate((0, w - 1))
 
     def flip_x(self):
         x, y, w, h = self.bounding_box
-        return Pattern([(x, -y) for (x, y) in self.alive_cells]).translate((0, h - 1))
+        self.alive_cells = {(x, -y) for (x, y) in self.alive_cells}
+        self.translate((0, h - 1))
 
     def flip_y(self):
         x, y, w, h = self.bounding_box
-        return Pattern([(-x, y) for (x, y) in self.alive_cells]).translate((w - 1, 0))
+        self.alive_cells = {(-x, y) for (x, y) in self.alive_cells}
+        self.translate((w - 1, 0))
 
     def to_rle(self):
         return Pattern.pat_to_rle(list(self.alive_cells))
