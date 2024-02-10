@@ -2,8 +2,24 @@ class PatternBase:
     def __init__(self):
         self.alive_cells = set()
 
-    @property
+    def alive(self, pos: tuple[int, int]):
+        return pos in self.alive_cells
+
+    def on(self, pos: tuple[int, int]):
+        self.alive_cells.add(pos)
+        self.trim()
+
+    def off(self, pos: tuple[int, int]):
+        self.alive_cells.discard(pos)
+        self.trim()
+
+    def trim(self):
+        pass
+
     def bbox(self):
+        pass
+
+    def copy(self):
         return None
 
     def translate(self, pos: tuple[int, int]):
@@ -18,11 +34,31 @@ class PatternBase:
     def stripped(self):
         pass
 
-    def add(self, pattern, pos: tuple[int, int]):
+    def add(self, pattern, pos: tuple[int, int] = None):
         pass
 
     def clear_rect(self, x, y, w, h):
         pass
+
+    def rotate90(self, clockwise=True):
+        x, y, w, h = self.bbox
+
+        if clockwise:
+            self.alive_cells = {(-y, x) for (x, y) in self.alive_cells}
+            self.translate((h - 1, 0))
+        else:
+            self.alive_cells = {(y, -x) for (x, y) in self.alive_cells}
+            self.translate((0, w - 1))
+
+    def flip_x(self):
+        x, y, w, h = self.bbox
+        self.alive_cells = {(x, -y) for (x, y) in self.alive_cells}
+        self.translate((0, h - 1))
+
+    def flip_y(self):
+        x, y, w, h = self.bbox
+        self.alive_cells = {(-x, y) for (x, y) in self.alive_cells}
+        self.translate((w - 1, 0))
 
 
 class Pattern(PatternBase):
@@ -32,13 +68,13 @@ class Pattern(PatternBase):
             self.alive_cells = set()
         elif isinstance(p, str):  # for RLE pattern
             self.alive_cells: set[tuple[int, int]] = set(Pattern.rle_to_pat(p))
-        elif isinstance(p, self.__class__):  # for Pattern objects
+        elif isinstance(p, PatternBase):  # for Pattern objects
             self.alive_cells = set(p.alive_cells)
         elif hasattr(p, '__iter__'):
             self.alive_cells = set(p)
 
     @property
-    def bounding_box(self):
+    def bbox(self):
         """
         Finds the size of the bounding box of the pattern.
 
@@ -72,11 +108,11 @@ class Pattern(PatternBase):
         return Pattern({(x[0] + pos[0], x[1] + pos[1]) for x in self.alive_cells})
 
     def strip(self):
-        x, y, _, _ = self.bounding_box
+        x, y, _, _ = self.bbox
         self.translate((-x, -y))
 
     def stripped(self):
-        x, y, _, _ = self.bounding_box
+        x, y, _, _ = self.bbox
         return self.translated((-x, -y))
 
     def add(self, pattern, pos: tuple[int, int] | None = None):
@@ -86,7 +122,7 @@ class Pattern(PatternBase):
         :param pos: tuple[int, int]
         :return: Pattern
         """
-        assert isinstance(pattern, self.__class__)
+        assert isinstance(pattern, PatternBase)
 
         if pos is None:
             pos = (0, 0)
@@ -102,26 +138,6 @@ class Pattern(PatternBase):
 
         positions = {(a, b) for a in range(x, x + w) for b in range(y, y + h)}
         self.alive_cells -= positions
-
-    def rotate90(self, clockwise=True):
-        x, y, w, h = self.bounding_box
-
-        if clockwise:
-            self.alive_cells = {(-y, x) for (x, y) in self.alive_cells}
-            self.translate((h - 1, 0))
-        else:
-            self.alive_cells = {(y, -x) for (x, y) in self.alive_cells}
-            self.translate((0, w - 1))
-
-    def flip_x(self):
-        x, y, w, h = self.bounding_box
-        self.alive_cells = {(x, -y) for (x, y) in self.alive_cells}
-        self.translate((0, h - 1))
-
-    def flip_y(self):
-        x, y, w, h = self.bounding_box
-        self.alive_cells = {(-x, y) for (x, y) in self.alive_cells}
-        self.translate((w - 1, 0))
 
     def to_rle(self):
         return Pattern.pat_to_rle(list(self.alive_cells))
@@ -220,3 +236,65 @@ class Pattern(PatternBase):
             end += 1
 
         return compressed_p + "!"
+
+
+class PatternFinite(PatternBase):
+    def __init__(self, size: tuple[int, int], p=None):
+        super().__init__()
+        if p is None:
+            self.alive_cells = set()
+        elif isinstance(p, str):  # for RLE pattern
+            self.alive_cells: set[tuple[int, int]] = set(Pattern.rle_to_pat(p))
+        elif isinstance(p, PatternBase):  # for Pattern objects
+            self.alive_cells = set(p.alive_cells)
+        elif hasattr(p, '__iter__'):
+            self.alive_cells = set(p)
+
+        self._size = size
+        self.trim()
+
+    @property
+    def bbox(self):
+        return (0, 0) + self._size
+
+    def copy(self, size: tuple[int, int] | None = None):
+        return PatternFinite(self._size if size is None else size, self.alive_cells)
+
+    def trim(self):
+        self.alive_cells = {cell for cell in self.alive_cells
+                            if 0 <= cell[0] < self._size[0] and 0 <= cell[1] < self._size[1]}
+
+    def translate(self, pos: tuple[int, int]):
+        new_cells = {(x[0] + pos[0], x[1] + pos[1]) for x in self.alive_cells}
+        self.alive_cells = new_cells
+        self.trim()
+
+    def translated(self, pos: tuple[int, int]):
+        return PatternFinite(self._size, {(x[0] + pos[0], x[1] + pos[1]) for x in self.alive_cells})
+
+    def strip(self):
+        dynamic_variant = Pattern(self.alive_cells)
+        dynamic_variant.strip()
+
+        self.alive_cells = dynamic_variant
+        self.trim()
+
+    def stripped(self):
+        dynamic_variant = Pattern(self.alive_cells)
+        dynamic_variant.strip()
+
+        new_pattern = PatternFinite(self._size, dynamic_variant)
+        return new_pattern
+
+    def add(self, pattern, pos: tuple[int, int] = None):
+        assert isinstance(pattern, PatternBase)
+
+        if pos is None:
+            pos = (0, 0)
+
+        self.alive_cells |= pattern.translated(pos).alive_cells
+        self.trim()
+
+    def clear_rect(self, x, y, w, h):
+        positions = {(a, b) for a in range(x, x + w) for b in range(y, y + h)}
+        self.alive_cells -= positions
