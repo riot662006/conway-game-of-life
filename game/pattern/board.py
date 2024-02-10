@@ -1,5 +1,5 @@
 import pygame
-from .patterns import Pattern
+from .patterns import *
 
 
 # the board of life. contains the cell grid. also displays the cells
